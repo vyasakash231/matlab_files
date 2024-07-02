@@ -25,47 +25,45 @@ end
 %     ylabel('\zeta_{2}','FontSize',15)
 % end 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Define parameters
-x0 = 0.5; % Example value for x0
-y0 = 0.5; % Example value for y0
+%% Define parameters
+x0 = 0.4; % Example value for x0
+y0 = 0.6; % Example value for y0
 z0 = 0.5; % Example value for z0
 n = 4;  % Example value for n
 
-xc = 0.5; yc = 0.5; zc = 0.5;  % center of box
+% Create a finer grid for x, y, and z
+[x, y, z] = meshgrid(linspace(-1, 1, 100), linspace(-1, 1, 100), linspace(-1, 1, 100));
 
-% Define the function
-% f = @(x, y, z) (x/x0).^n + (y/y0).^n + (z/z0).^n - 1;
+% Define the implicit function
+F = (x/x0).^n + (y/y0).^n + (z/z0).^n - 1;
 
-% Create a grid for x and y
-[x, y] = meshgrid(linspace(-1, 1, 500), linspace(-1, 1, 500));
-
-% Solve for z
-z_positive = ((1 - ((x-xc)/x0).^n - ((y-yc)/y0).^n) .* z0^n).^(1/n) - zc;
-z_negative = -((1 - ((x-xc)/x0).^n - ((y-yc)/y0).^n) .* z0^n).^(1/n) - zc;
-
-% Filter out complex values
-z_positive(imag(z_positive) ~= 0) = NaN;
-z_negative(imag(z_negative) ~= 0) = NaN;
-
-% Plot the positive surface
+% Create the figure
 figure;
-surf(x, y, real(z_positive));
 hold on;
-% Plot the negative surface
-surf(x, y, real(z_negative));
 
-% Customize plot
+% Extract and plot the isosurface where F = 0
+p = patch(isosurface(x, y, z, F, 0));
+isonormals(x, y, z, F, p);
+set(p, 'FaceColor', 'red', 'EdgeColor', 'none');
+
+% Apply interpolation to smooth the surface
+p = reducepatch(p, 0.1); % Reduce the number of patches for smoothing
+
+% Enhance visualization
+daspect([1 1 1]);
+view(3);
+axis([-2 2 -2 2 -2 2]);
+camlight;
+lighting gouraud;
 xlabel('x');
 ylabel('y');
 zlabel('z');
-title('Plot of (x-xc/x0)^n + (y-yc/y0)^n + (z-zc/z0)^n = 1');
+title('Plot of (x/x0)^n + (y/y0)^n + (z/z0)^n = 1');
 grid on;
-axis equal;
-axis([-2 2 -2 2 -2 2])
+colormap jet;
+colorbar;
 
-% Additional customization for clarity
-shading interp;
-alpha 0.7;
-
+hold off;
