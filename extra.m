@@ -50,7 +50,7 @@ isonormals(x, y, z, F, p);
 set(p, 'FaceColor', 'red', 'EdgeColor', 'none');
 
 % Apply interpolation to smooth the surface
-p = reducepatch(p, 0.1); % Reduce the number of patches for smoothing
+% p = reducepatch(p, 0.1); % Reduce the number of patches for smoothing
 
 % Enhance visualization
 daspect([1 1 1]);
