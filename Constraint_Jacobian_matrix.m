@@ -15,6 +15,7 @@ function Jc = Constraint_Jacobian_matrix(obstacle,D,Influence_radius,alpha,a,d,t
         else
             [R,C] = size(norm_s' * Jx);
             Jc(i,:) = zeros(R,C);
+        end
     end
 
 end

@@ -1,9 +1,18 @@
 %% Numerical Inverse Kinematics Algorithm
 clc; clear all; close all;
 
-%addpath E:\Matlab_Files\Robotics\Lab_Assignment % To access function from other folders
+%X_g = 0.1; Y_g = -0.2; Z_g = 0.1; 
+X_g = -0.2; Y_g = -0.175; Z_g = 0.09;
 
-X_g = 0.1; Y_g = -0.2; Z_g = 0.1; 
+% Define sphere parameters (obstacle center)
+obstacle = [0.165; -0.165; 0.185]; 
+radius = 0.01;
+q_angle = linspace(0, 2*pi, 40);  % azimuthal angle
+psi = linspace(0, pi, 40);  % polar angle
+
+xs = obstacle(1) + radius * sin(psi') .* cos(q_angle);
+ys = obstacle(2) + radius * sin(psi') .* sin(q_angle);
+zs = obstacle(3) + radius * cos(psi') * ones(size(q_angle));
 
 n = 4; % No of Joint
 p = 0.128; q = 0.024;
@@ -22,140 +31,135 @@ Z(1,:) = Z_cord;
 
 theta_range = [-180 180;-117 90;-90 87.5;-103 114.5]; % range of motion of each joint
 
-R = diag([1,1,1,1]);
-Q = diag([100000,50000,50000]);
-
-d_t = 0.005;
-t = 0:d_t:10; 
+R = diag([0.1,0.1,0.2,0.2]);
+Q = diag([1,1,1]);
 
 control_input = [0;0;0;0];
 
-% del_X = ones(3,1);
-% while max(abs(del_X(1:3,i))) > 0.01
-for i=1:length(t)
-    X_c = X(i,n+2);
-    Y_c = Y(i,n+2);
-    Z_c = Z(i,n+2);
-    
-    dX = [(X_c - X_g); (Y_c - Y_g); (Z_c - Z_g)];
+i = 1; dX = 1;
+while norm(dX) > 0.001
+    % End-effector coord
+    X_e = X(i,n+2);  Y_e = Y(i,n+2);  Z_e = Z(i,n+2);
+
+    dX = [(X_g - X_e); (Y_g - Y_e); (Z_g - Z_e)];
     del_X(:,i) = dX;  % for plotting
     
     [~,Jv,~] = Jacobian_matrix(n,alpha,a,d,theta(i,:));
 
+    Co = 5 * exp(-50 * norm([X_e - obstacle(1); Y_e - obstacle(2); Z_e - obstacle(3)]));  % obstacle avoidance
+    
     phi = (Jv' * dX) / norm(Jv' * dX); % (4,1)
+    d_theta = (1-exp(-i*0.05)) * sqrt(dX' * Q * dX + Co) * (inv(R).^0.5 * phi);  % HJB Control Input
 
-    d_theta = - (1-exp(-i*0.05)) * sqrt(dX' * Q * dX) * (inv(R).^0.5 * phi); 
-
-    control_input(:,i+1) = d_theta * (pi/180);
+    control_input(:,i+1) = deg2rad(d_theta);  % In radians for ploting
     
     % Solving using Euler-forward method
-    theta_new = theta(i,:) + d_theta' * d_t; % In degrees
-    
-    theta(i+1,:) = theta_new; % In degrees  (for plotting)
+    theta(i+1,:) = theta(i,:) + d_theta'; % In degrees
     
     % Next Step performed
-    [X_cord, Y_cord, Z_cord] = Forward_Kinematic(n,alpha,a,d,theta_new,Le);
+    [X_cord, Y_cord, Z_cord] = Forward_Kinematic(n,alpha,a,d,theta(i+1,:),Le);
 
-    X(i+1,:) = X_cord; % for plotting
-    Y(i+1,:) = Y_cord; % for plotting
-    Z(i+1,:) = Z_cord; % for plotting
+    X(i+1,:) = X_cord;  Y(i+1,:) = Y_cord;  Z(i+1,:) = Z_cord; % for plotting
 
-    if rms(dX) < 0.005
-        break
-    end
+    i = i+1;
 end
 
 figure
-for k = 1:i-250
-    set(gca,'Projection','perspective')
-    plot3(X(k,1:2),Y(k,1:2),Z(k,1:2),'-','LineWidth',4);
+for k = 1:i-200
+    plot3(X(1,6),Y(1,6),Z(1,6),"*g",'LineWidth',8)
     hold on
-    plot3(X(k,2:3),Y(k,2:3),Z(k,2:3),'-','LineWidth',4);
+    plot3(X_g,Y_g,Z_g,"*r",'LineWidth',8)
     hold on
-    plot3(X(k,3:4),Y(k,3:4),Z(k,3:4),'-','LineWidth',3);
+    plot3(X(k,1:2),Y(k,1:2),Z(k,1:2),'-','LineWidth',8);
     hold on
-    plot3(X(k,4:5),Y(k,4:5),Z(k,4:5),'-','LineWidth',3);
+    plot3(X(k,2:3),Y(k,2:3),Z(k,2:3),'-','LineWidth',7);
     hold on
-    plot3(X(k,5:6),Y(k,5:6),Z(k,5:6),'-','LineWidth',2);
+    plot3(X(k,3:4),Y(k,3:4),Z(k,3:4),'-','LineWidth',6);
     hold on
+    plot3(X(k,4:5),Y(k,4:5),Z(k,4:5),'-','LineWidth',5);
+    hold on
+    plot3(X(k,5:6),Y(k,5:6),Z(k,5:6),'-','LineWidth',4);
+    hold on
+    plot3(X(1:k,end),Y(1:k,end),Z(1:k,end),LineWidth=2,Color='m')
+    hold on 
+    surf(xs, ys, zs, 'FaceColor', 'black', 'EdgeColor', 'none', 'FaceAlpha', 0.5); % spherical obstacle bounndary points
 
-    axis([-0.5 0.5 -0.5 0.5 0 0.5])
-    %axis square
-    xlabel('X-axis')
-    ylabel('Y-axis')
-    zlabel('Z-axis')
+    axis([-0.28, 0.28, -0.28, 0.28, 0, 0.56])
+    axis square
+    view(240,15);
     grid on
-    hold on
-    view(60,30);
+    xlabel('X-axis','interpreter','latex',FontSize=15); 
+    ylabel('Y-axis','interpreter','latex',FontSize=15); 
+    zlabel('Z-axis','interpreter','latex',FontSize=15);
     drawnow
     hold off
 end
 
 figure
 subplot(1,2,1)
-plot(t(1:i),del_X(1:3,:),'--','LineWidth',2)
+plot(1:size(del_X,2),del_X(1:3,:),'--','LineWidth',2)
 hold on 
-plot(t(1:i),rms(del_X(1:3,:)),'LineWidth',2)
-xlabel('time (s)')
-ylabel('Position error(mm)')
-legend('(X_{goal} - X_{current})','(Y_{goal} - Y_{current})','(Z_{goal} - Z_{current})','RMS Error')
+plot(1:size(del_X,2),rms(del_X(1:3,:)),'LineWidth',2)
+xlabel('steps')
+ylabel('$Error$','interpreter','latex',FontSize=15)
+legend('e_{x}','e_{y}','e_{z}','RMS Error')
 grid on
 grid minor
 
 subplot(1,2,2)
-plot(t(1:i),control_input(:,1:i),'LineWidth',2)
+plot(1:size(control_input,2),control_input(:,1:i),'LineWidth',2)
 hold on 
-xlabel('time (s)')
-ylabel('Control Input (rad/s)')
-legend('J_{1}','J_{2}','J_{3}','J_{4}')
+legend('\theta_{1}','\theta_{2}','\theta_{3}', '\theta_{1}')
+xlabel('steps')
+ylabel('$Joint Velocity (rad/s)$','interpreter','latex',FontSize=15)
 grid on
 grid minor
 
-figure
-subplot(2,2,1)
-plot(1:i+1,theta(:,1),'LineWidth',2)
-hold on
-plot(1:i,-180*ones(1,i),'--','LineWidth',2)
-hold on
-plot(1:i,180*ones(1,i),'--','LineWidth',2)
-hold off
-xlabel('No of Iteration')
-ylabel('\theta_{1}')
-grid on
-grid minor
+% figure
+% subplot(2,2,1)
+% plot(1:size(theta,1),theta(:,1),'LineWidth',2)
+% hold on
+% plot(1:size(theta,1),-180*ones(1,i),'--','LineWidth',2)
+% hold on
+% plot(1:size(theta,1),180*ones(1,i),'--','LineWidth',2)
+% hold off
+% xlabel('No of Iteration')
+% ylabel('\theta_{1}')
+% grid on
+% grid minor
 
-subplot(2,2,2)
-plot(1:i+1,theta(:,2),'LineWidth',2)
-hold on
-plot(1:i,-117*ones(1,i),'--','LineWidth',2)
-hold on
-plot(1:i,90*ones(1,i),'--','LineWidth',2)
-hold off
-xlabel('No of Iteration')
-ylabel('\theta_{2}')
-grid on
-grid minor
+% subplot(2,2,2)
+% plot(1:size(theta,1),theta(:,2),'LineWidth',2)
+% hold on
+% plot(1:size(theta,1),-117*ones(1,i),'--','LineWidth',2)
+% hold on
+% plot(1:size(theta,1),90*ones(1,i),'--','LineWidth',2)
+% hold off
+% xlabel('No of Iteration')
+% ylabel('\theta_{2}')
+% grid on
+% grid minor
 
-subplot(2,2,3)
-plot(1:i+1,theta(:,3),'LineWidth',2)
-hold on
-plot(1:i,-90*ones(1,i),'--','LineWidth',2)
-hold on
-plot(1:i,87.5*ones(1,i),'--','LineWidth',2)
-hold off
-xlabel('No of Iteration')
-ylabel('\theta_{3}')
-grid on
-grid minor
+% subplot(2,2,3)
+% plot(1:size(theta,1),theta(:,3),'LineWidth',2)
+% hold on
+% plot(1:size(theta,1),-90*ones(1,i),'--','LineWidth',2)
+% hold on
+% plot(1:size(theta,1),87.5*ones(1,i),'--','LineWidth',2)
+% hold off
+% xlabel('No of Iteration')
+% ylabel('\theta_{3}')
+% grid on
+% grid minor
 
-subplot(2,2,4)
-plot(1:i+1,theta(:,4),'LineWidth',2)
-hold on
-plot(1:i,-103*ones(1,i),'--','LineWidth',2)
-hold on
-plot(1:i,114.5*ones(1,i),'--','LineWidth',2)
-hold off
-xlabel('No of Iteration')
-ylabel('\theta_{4}')
-grid on
-grid minor
+% subplot(2,2,4)
+% plot(1:size(theta,1),theta(:,4),'LineWidth',2)
+% hold on
+% plot(1:size(theta,1),-103*ones(1,i),'--','LineWidth',2)
+% hold on
+% plot(1:size(theta,1),114.5*ones(1,i),'--','LineWidth',2)
+% hold off
+% xlabel('No of Iteration')
+% ylabel('\theta_{4}')
+% grid on
+% grid minor
