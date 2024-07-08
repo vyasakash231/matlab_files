@@ -4,9 +4,9 @@ clc; clear all; close all;
 % Initialize the starting positions of the robots
 % robotPos = [1.5, 1.25, 1.35, 1.25, 1.5, 1.25, 1.35, 1.25, 1.5, 1.25, 1.35, 1.25, 1.5, 1.25, 1.35, 1.25, 1.5, 1.25, 1.35, 1.25; 
 %             2.05, 2.15, 2.25, 2.35, 2.45, 2.55, 2.65, 2.75, 2.85, 2.95, 3.05, 3.15, 3.25, 3.35, 3.45, 3.55, 3.65, 3.75, 3.85, 3.95]; % Each column represents a robot's starting position
-robotPos = [1.5; 
-            2.75];  % Each column represents a robot's starting position
-% robotPos = [1.5; 3.25];  % Each column represents a robot's starting position
+% robotPos = [1.5; 
+            % 2.75];  % Each column represents a robot's starting position
+robotPos = [1.5; 3.25];  % Each column represents a robot's starting position
 % robotPos = [1.25, 1.25, 1.5, 1.25, 1.35, 1.25, 1.5, 1.25, 1.35, 1.25, 1.5, 1.25, 1.35, 1.25, 1.5, 1.25; 
 %            2.25, 2.35, 2.45, 2.55, 2.65, 2.75, 2.85, 2.95, 3.05, 3.15, 3.25, 3.35, 3.45, 3.55, 3.65, 3.75]; % Each column represents a robot's starting position
 

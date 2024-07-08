@@ -239,8 +239,8 @@ function plotHandles = initializePlots(X_start, Y_start, Z_start, X_g, Y_g, Z_g,
         end
 
         plotHandles.(subplot_handle).sphere = surf(xs, ys, zs, 'FaceColor', 'black', 'EdgeColor', 'none', 'FaceAlpha', 0.5); %plot3(xs, ys, zs, 'k');  % spherical obstacle bounndary points
-        plotHandles.(subplot_handle).influence_field_1 = surf(x1_bound, y1_bound, z1_bound, 'FaceColor', 'cyan', 'EdgeColor', 'none', 'FaceAlpha', 0.1); % infulence sphere 1
-        plotHandles.(subplot_handle).influence_field_2 = surf(x2_bound, y2_bound, z2_bound, 'FaceColor', 'black', 'EdgeColor', 'none', 'FaceAlpha', 0.1); % infulence sphere 2
+        % plotHandles.(subplot_handle).influence_field_1 = surf(x1_bound, y1_bound, z1_bound, 'FaceColor', 'cyan', 'EdgeColor', 'none', 'FaceAlpha', 0.1); % infulence sphere 1
+        % plotHandles.(subplot_handle).influence_field_2 = surf(x2_bound, y2_bound, z2_bound, 'FaceColor', 'black', 'EdgeColor', 'none', 'FaceAlpha', 0.1); % infulence sphere 2
         plotHandles.(subplot_handle).surface_plane = surf(xp, yp, zp, 'FaceColor', 'yellow', 'FaceAlpha', 0.5); % base plane surface
         plotHandles.(subplot_handle).trajectory = plot3(NaN, NaN, NaN, 'LineWidth', 1.5, 'Color', 'm');
 

@@ -48,10 +48,10 @@ while norm(dX) > 0.001
     
     [~,Jv,~] = Jacobian_matrix(n,alpha,a,d,theta(i,:));
 
-    % Co = 5 * exp(-50 * norm([X_e - obstacle(1); Y_e - obstacle(2); Z_e - obstacle(3)]));  % obstacle avoidance
+    Co = 5 * exp(-50 * norm([X_e - obstacle(1); Y_e - obstacle(2); Z_e - obstacle(3)]));  % obstacle avoidance
     
     phi = (Jv' * dX) / norm(Jv' * dX); % (4,1)
-    d_theta = (1-exp(-i*0.05)) * sqrt(dX' * Q * dX) * (inv(R).^0.5 * phi);  % HJB Control Input
+    d_theta = (1-exp(-i*0.05)) * sqrt(dX' * Q * dX + Co) * (inv(R).^0.5 * phi);  % HJB Control Input
 
     control_input(:,i+1) = deg2rad(d_theta);  % In radians for ploting
     

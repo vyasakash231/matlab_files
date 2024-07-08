@@ -2,14 +2,15 @@
 clc; clear all; close all;
 
 %X_g = -0.05; Y_g = -0.2; Z_g = 0.075;  % original_goal state
-X_g = 0.08; Y_g = -0.15; Z_g = 0.16;  % original_goal state
+X_g = 0.0; Y_g = -0.15; Z_g = 0.16;  % original_goal state
 
 % Define sphere parameters (obstacle center)
-%obstacle = [0.075; -0.075; 0.22]; 
-%obstacle = [0.085; -0.085; 0.22];
-obstacle = [0.09; -0.09; 0.185];
-%obstacle = [0.05; -0.075; 0.2];
-%obstacle = [0.09; -0.085; 0.2];  % failed case
+% obstacle = [0.075; -0.075; 0.22]; 
+% obstacle = [0.085; -0.085; 0.22];
+% obstacle = [0.09; -0.09; 0.185];
+% obstacle = [0.05; -0.075; 0.2];
+% obstacle = [0.09; -0.085; 0.2];  % failed case
+obstacle = [0.125; -0.1; 0.18];
 
 radius = 0.02;
 q_angle = linspace(0, 2*pi, 40);  % azimuthal angle
@@ -21,7 +22,7 @@ zs = obstacle(3) + radius * cos(psi') * ones(size(q_angle));
 
 % Define Influence_Radius sphere
 scale = 2;
-Influence_radius = 0.014;  % if the distance btw manipulator and obstacle is less then this, apply force
+Influence_radius = 0.025;  % if the distance btw manipulator and obstacle is less then this, apply force
 D2 = radius + Influence_radius;  % inner Influence sphere
 D1 = radius + scale*Influence_radius;  % outer Influence sphere
 
@@ -51,14 +52,11 @@ p = 0.128; q = 0.024;
 alpha = [0,90,0,0];  % In degree
 a = [0,0,sqrt(p^2 + q^2),0.124];
 d = [0.077,0,0,0];
-%theta = [90,90,-79.38,-45];
 theta = [0,90,-79.38,-45];
 Le = 0.126;  % End-effector length
 
 [X_cord, Y_cord, Z_cord] = Forward_Kinematic(n,alpha,a,d,theta,Le);
-X(1,:) = X_cord; 
-Y(1,:) = Y_cord;
-Z(1,:) = Z_cord;
+X(1,:) = X_cord;   Y(1,:) = Y_cord;  Z(1,:) = Z_cord;
 
 X_start = X_cord(end);
 Y_start = Y_cord(end);
@@ -68,8 +66,8 @@ R = diag([0.1,0.1,0.15,0.15]);
 Q = diag([70000,70000,50000]);
 beta = diag([0.25,0.25,0.25,0.25]);
 
-d_t = 0.01;
-t = 0:d_t:7; 
+dt = 0.01;
+t = 0:dt:10; 
 
 critic_vel_norm = zeros(3,n);
 coord_of_critical_vel = zeros(3,n);
@@ -77,7 +75,7 @@ unit_vec_links_to_obstacle = [];
 links_unit_vec = [];
 new_critical_vel_norm = [];
 
-del_X = ones(3,1);
+del_X = ones(3,1)/dt;
 for i=1:length(t)
     [D, O_m] = Critical_Point(radius, obstacle, X_cord, Y_cord, Z_cord);
 
@@ -85,21 +83,21 @@ for i=1:length(t)
     closest_point(:,:,i) = O_m;
 
     % End-effector coord
-    X_e = X(i,n+2);  Y_e = Y(i,n+2);  Z_e = Z(i,n+2);
+    Xe = X(i,n+2);  Ye = Y(i,n+2);  Ze = Z(i,n+2);
 
-    dX = [(X_g - X_e); (Y_g - Y_e); (Z_g - Z_e)];
-    del_X(:,i) = dX;  % for plotting
+    dX = [(X_g - Xe); (Y_g - Ye); (Z_g - Ze)];
+    del_X(:,i) = dX/dt;  % for plotting
     
     [~,Jv,~] = Jacobian_matrix(n,alpha,a,d,theta(i,:));
     
     phi = (Jv' * dX) / norm(Jv' * dX); % (4,1)
-    d_theta = (1-exp(-i*0.05)) * sqrt(dX' * Q * dX) * (inv(R).^0.5 * phi);  % HJB Control Input
+    dtheta = (1-exp(-i*0.05)) * sqrt(dX' * Q * dX) * (inv(R).^0.5 * phi);  % HJB Control Input
 
     z = min(D);
     
     if z <= 2*Influence_radius  % check if any of the close point is within Influence sphere
         idx = [find(D <= 2*Influence_radius)];  % store all close point (within Influence sphere)
-        [critical_point_velocity, point] = Joint_Velocity_to_Link_Velocity(D, O_m, Influence_radius, d_theta, alpha, a, d, theta(i,:));  % (3,4), (3,4)       
+        [critical_point_velocity, point] = Joint_Velocity_to_Link_Velocity(D, O_m, Influence_radius, dtheta, alpha, a, d, theta(i,:));  % (3,4), (3,4)       
         if length(idx) > 1  % If multiple point on the manipulator are close to the obstacle
             for  w=1:length(idx)  % If the point is too close apply force on that point
                 critic_vel_norm(:,idx(w),i) =  critical_point_velocity(:,idx(w)) / norm(critical_point_velocity(:,idx(w)));
@@ -120,31 +118,30 @@ for i=1:length(t)
                 lambda = (pi/2 - gamma(u)) * ((norm(obstacle - coord_of_critical_vel(:,u,i)) - D1) / (D2 - D1));  % in radians
                 new_critical_vel(:,u) = Linear_Velocity_transform(critical_point_velocity(:,u), coord_of_critical_vel(:,u,i), links_unit_vec(:,u,i), lambda);
                 new_critical_vel_norm(:,u,i) = new_critical_vel(:,u) / norm(new_critical_vel(:,u));
-                d_theta_ext(:,u) = exp(-100*(D(u) - z)) * Link_Velocity_to_Joint_Velocity(u, O_m(:,u), new_critical_vel(:,u), alpha, a, d, theta(i,:));
+                dtheta_ext(:,u) = exp(-100*(D(u) - z)) * Link_Velocity_to_Joint_Velocity(u, O_m(:,u), new_critical_vel(:,u), alpha, a, d, theta(i,:));
             end
         end
 
         if any(gamma(idx) < pi/2)
-            d_theta = beta * d_theta + sum(d_theta_ext,2);
+            dtheta = beta * dtheta + sum(dtheta_ext,2);
         end
     end
     
-    control_input(:,i+1) = deg2rad(d_theta);
+    control_input(:,i) = deg2rad(dtheta);
+
+    cost(i) = transpose(dX) * Q * (dX) + transpose(dtheta) * R * dtheta;
     
     % Solving using Euler-forward method
-    theta_new = theta(i,:) + d_theta' * d_t;  % here theta is in degrees
-    
-    theta(i+1,:) = theta_new; % In degrees  (for plotting)
+    theta(i+1,:) = theta(i,:) + dtheta' * dt;  % here theta is in degrees
     
     % Next Step performed
-    [X_cord, Y_cord, Z_cord] = Forward_Kinematic(n,alpha,a,d,theta_new,Le);
+    [X_cord, Y_cord, Z_cord] = Forward_Kinematic(n,alpha,a,d,theta(i+1,:),Le);
 
     X(i+1,:) = X_cord;  Y(i+1,:) = Y_cord;  Z(i+1,:) = Z_cord; % for plotting
 
     if norm(dX) < 0.002  % if distance btw goal and ee is less then 1mm
         break
     end
-
 end
 
 % Initialize the plots
@@ -156,7 +153,7 @@ for k = 1:i-100
 end
 
 figure
-subplot(1,2,1)
+subplot(1,3,1)
 plot(t(1:i),del_X(1:3,:),'--','LineWidth',2)
 hold on 
 plot(t(1:i),rms(del_X(1:3,:)),'LineWidth',2)
@@ -167,13 +164,22 @@ legend('(X_{goal} - X_{current})','(Y_{goal} - Y_{current})','(Z_{goal} - Z_{cur
 grid on
 grid minor
 
-subplot(1,2,2)
+subplot(1,3,2)
 plot(t(1:i),control_input(:,1:i),'LineWidth',2)
 hold on 
 axis square
 xlabel('time (s)')
 ylabel('Control Input (rad/s)')
 legend('J_{1}','J_{2}','J_{3}','J_{4}')
+grid on
+grid minor
+
+subplot(1,3,3)
+plot(t(1:i),cost,'LineWidth',2)
+hold on 
+axis square
+xlabel('time (s)')
+ylabel('Tajectory Cost')
 grid on
 grid minor
 
@@ -226,3 +232,6 @@ grid minor
 %ylabel('\theta_{4}')
 %grid on
 %grid minor
+
+
+
