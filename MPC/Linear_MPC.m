@@ -3,8 +3,6 @@ clear all; clc;
 
 N = 4; % Prediction Horizon
 
-addpath(genpath('Utilities'))
-
 %DH parameters
 n = 4; % No of Joint
 alpha = [0,90,0,0]; % In degree

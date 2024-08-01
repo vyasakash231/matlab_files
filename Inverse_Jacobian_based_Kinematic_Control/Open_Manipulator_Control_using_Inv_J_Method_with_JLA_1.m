@@ -9,7 +9,7 @@ A JLA additional task is activated and deactivated by wisely selecting its
 corresponding weight matrix-Wc in the configuration control formulation.
 %}
 clc; clear all; close all;
-syms theta1 theta2 theta3 theta4 
+% syms theta1 theta2 theta3 theta4 
 
 % Goal Location in Task Space
 X_g = 0.1; Y_g = -0.2; Z_g = 0.12;
@@ -62,9 +62,10 @@ Y(i,:) = Y_cord;
 Z(i,:) = Z_cord;
 
 % Addition Constraints
-zc = [theta1; theta2; theta3; theta4];
-theta_vector = [theta1; theta2; theta3; theta4]; % Joint variable vector
-Jc = double(jacobian(zc,theta_vector)); % Jacobian matrix of additional task (4x4)
+% zc = [theta1; theta2; theta3; theta4];
+% theta_vector = [theta1; theta2; theta3; theta4]; % Joint variable vector
+% Jc = double(jacobian(zc,theta_vector)); % Jacobian matrix of additional task (4x4)
+Jc = eye(length(theta));
 
 Q_range = [-180 180;-117 90;-90 87.5;-103 114.5]; % range of motion of each joint
 
